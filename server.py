@@ -375,7 +375,7 @@ class Handler(Thread):
 
         # Check number of arguments
         if len(argumentList) != 2:
-            self.udp.sendUDP(CMD_DISPLAY[0], "Usage: " + CMD_UPLOAD_FILE[1], STATUS_BAD, self.sender)
+            self.udp.sendUDP(CMD_DISPLAY[0], "Usage: " + CMD_DOWNLOAD_FILE[1], STATUS_BAD, self.sender)
             return
         
         # Check validity of filename
