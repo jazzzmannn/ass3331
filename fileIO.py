@@ -13,46 +13,59 @@ from os import remove
 THREAD_TYPE_MESSAGE = "message"
 THREAD_TYPE_FILE = "file"
 FORUM_FILE_LIST = "forumFileList.txt"
+FORUM_THREAD_LIST = "forumThreadList.txt"
 
-# For storing information about threads created and files uploaded
+# For storing information about threads created
+def addThread(filename):
+    safeWrite(FORUM_THREAD_LIST, filename + "\n", "a")
+
+# For storing information about files uploaded
 def addFilename(filename):
     safeWrite(FORUM_FILE_LIST, filename + "\n", "a")
 
-# For getting the list of files added/uploaded
-def getFileList():
+# For reading lines from a file
+def readList(listName):
     try:
-        f = open(FORUM_FILE_LIST, "r")
+        f = open(listName, "r")
         fileList = f.read().splitlines()
         f.close()
     except:
         fileList = []
     return fileList
 
-# For removing a file from the list of files added/uploaded
-def removeFilename(filename):
-    fileList = getFileList()
-    fileList.remove(filename)
-    safeWrite(FORUM_FILE_LIST, "", "w") # truncate
-    for file in fileList:
-        safeWrite(FORUM_FILE_LIST, file + "\n", "a")
+# For getting the list of files added/uploaded
+def getForumFiles():
+    return readList(FORUM_FILE_LIST)
 
-# Remove all .txt files
+# For getting the list of files added/uploaded
+def getForumThreads():
+    return readList(FORUM_THREAD_LIST)
+
+# For removing a thread
+def removeThread(filename):
+    fileList = getForumThreads()
+    fileList.remove(filename)
+    safeWrite(FORUM_THREAD_LIST, "", "w") # truncate
+    for file in fileList:
+        safeWrite(FORUM_THREAD_LIST, file + "\n", "a")
+
+# Remove all files
 def removeAllFiles():
-    fileList = getFileList()
+    fileList = getForumFiles() + getForumThreads()
     for file in fileList:
         safeRemove("./" + file)
     safeWrite(FORUM_FILE_LIST, "", "w") # truncate
 
 # Converts an existing thread into a list of lines
-def fileToLineList(threadTitle):
-    f = open(threadTitle + ".txt", "r")
+def threadToLineList(threadTitle):
+    f = open(threadTitle, "r")
     threadContent = f.read().splitlines()
     f.close()
     return threadContent
 
 # Converts an existing thread into its components
 def fileToThread(threadTitle):
-    threadContent = fileToLineList(threadTitle)
+    threadContent = threadToLineList(threadTitle)
 
     # Get author and messages    
     creator = threadContent[0]
@@ -95,18 +108,18 @@ def threadToFile(threadTitle, creator, threadList):
             toWrite += threadList[i]["username"] + " uploaded " + threadList[i]["filename"] + "\n"
     
     # Safely write
-    safeWrite(threadTitle + ".txt", toWrite, "w")
+    safeWrite(threadTitle, toWrite, "w")
 
 # Adds a message
 def addMessage(threadTitle, author, content):
     _, threadList = fileToThread(threadTitle)
     numMessages = sum([1 for threadLine in threadList if threadLine["type"] == THREAD_TYPE_MESSAGE])
     messageLine = str(numMessages + 1) + " " + author + ": " + content + "\n"
-    safeWrite(threadTitle + ".txt", messageLine, "a")
+    safeWrite(threadTitle, messageLine, "a")
 
 # Adds a file upload line
 def addFileToThread(threadTitle, author, filename):
-    safeWrite(threadTitle + ".txt", author + " uploaded " + filename + "\n", "a")
+    safeWrite(threadTitle, author + " uploaded " + filename + "\n", "a")
 
 # Get index of message number
 def getMessageIndex(threadList, messageNumber):

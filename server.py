@@ -36,9 +36,10 @@ def main():
     print("[server] Socket bound, IP=" + str(SERVER_HOST) + ", PORT=" + str(serverPort))
     print("[server] Waiting for clients ...")
 
-    # Initialise
-    safeWrite(ACTIVE_USERS_FILE, "", "w") # truncate
-    safeWrite(FORUM_FILE_LIST, "", "w") # truncate
+    # Initialise (truncate)
+    safeWrite(ACTIVE_USERS_FILE, "", "w")
+    safeWrite(FORUM_FILE_LIST, "", "w")
+    safeWrite(FORUM_THREAD_LIST, "", "w")
 
     # Set up controller for server
     control = ServerControl(serverSocket, serverAddress, serverPort)
@@ -48,6 +49,7 @@ def main():
         removeAllFiles()
         safeRemove(ACTIVE_USERS_FILE)
         safeRemove(FORUM_FILE_LIST)
+        safeRemove(FORUM_THREAD_LIST)
 
     # Close the socket
     serverSocket.close()
@@ -203,13 +205,13 @@ class Handler(Thread):
         
         # Check validity of filename
         threadTitle = argumentList[0]
-        if not isFilenameValid(threadTitle) or exists("./" + threadTitle + ".txt") or threadTitle + ".txt" in getFileList():
+        if not isFilenameValid(threadTitle) or exists("./" + threadTitle) or threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title is either invalid or already exists", STATUS_BAD, self.sender)
         
         # Everything is fine, so create thread
         else:
-            safeWrite(threadTitle + ".txt", self.sender["name"] + "\n", "w")
-            addFilename(threadTitle + ".txt")
+            safeWrite(threadTitle, self.sender["name"] + "\n", "w")
+            addThread(threadTitle)
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread, " + threadTitle + ", has been successfully created", STATUS_OK, self.sender)
 
     # Process message posting
@@ -224,7 +226,7 @@ class Handler(Thread):
         # Check existence of filename
         threadTitle = argumentList[0]
         content = " ".join(argumentList[1:])
-        if not threadTitle + ".txt" in getFileList():
+        if not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
             return
         
@@ -244,7 +246,7 @@ class Handler(Thread):
         # Check existence of filename
         threadTitle = argumentList[0]
         messageNumber = int(argumentList[1])
-        if not threadTitle + ".txt" in getFileList():
+        if not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
             return
         
@@ -265,7 +267,7 @@ class Handler(Thread):
         threadTitle = argumentList[0]
         messageNumber = int(argumentList[1])
         content = " ".join(argumentList[2:])
-        if not threadTitle + ".txt" in getFileList():
+        if not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
             return
         
@@ -277,7 +279,7 @@ class Handler(Thread):
     def processListThreads(self):
 
         # Get all files
-        fileList = [file[:-4] for file in getFileList() if file.endswith(".txt")]
+        fileList = [file for file in getForumThreads()]
         
         # If no files
         if len(fileList) == 0:
@@ -300,13 +302,13 @@ class Handler(Thread):
         
         # Check existence of filename
         threadTitle = argumentList[0]
-        if not threadTitle + ".txt" in getFileList():
+        if not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
             return
         
         # Read content of file
         toWrite = "Reading thread, " + threadTitle + ":\n  "
-        toWrite += "\n  ".join(fileToLineList(threadTitle))
+        toWrite += "\n  ".join(threadToLineList(threadTitle))
         self.udp.sendUDP(CMD_DISPLAY[0], toWrite, STATUS_OK, self.sender)
     
     # Process thread removal
@@ -320,7 +322,7 @@ class Handler(Thread):
 
         # Check existence of filename
         threadTitle = argumentList[0]
-        if not threadTitle + ".txt" in getFileList():
+        if not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
             return
         
@@ -331,8 +333,8 @@ class Handler(Thread):
             return
         
         # Remove file
-        safeRemove("./" + threadTitle + ".txt")
-        removeFilename(threadTitle + ".txt")
+        safeRemove("./" + threadTitle)
+        removeThread(threadTitle)
         self.udp.sendUDP(CMD_DISPLAY[0], "The thread, " + threadTitle + ", has been successfully removed", STATUS_OK, self.sender)
 
     # Process file upload
@@ -351,7 +353,7 @@ class Handler(Thread):
             self.udp.sendUDP(CMD_DISPLAY[0], "The filename is invalid", STATUS_BAD, self.sender)
         
         # Check existence of thread
-        elif not threadTitle + ".txt" in getFileList():
+        elif not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
         
         # Check if file already uploaded
@@ -383,7 +385,7 @@ class Handler(Thread):
             self.udp.sendUDP(CMD_DISPLAY[0], "The filename is invalid", STATUS_BAD, self.sender)
         
         # Check existence of thread
-        elif not threadTitle + ".txt" in getFileList():
+        elif not threadTitle in getForumThreads():
             self.udp.sendUDP(CMD_DISPLAY[0], "The thread title does not exist", STATUS_BAD, self.sender)
         
         # Check if file already uploaded
